@@ -1,0 +1,25 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ template "component.name" . }}
+  namespace: {{ .Values.global.kubernetes.namespace }}
+  labels:
+    app: {{ template "component.name" . }}
+    name: {{ template "component.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  gateways:
+  - eh-gateway
+  hosts:
+  - '*'
+  http:
+  - match:
+    - uri:
+        exact: /
+    route:
+    - destination:
+        host: {{ template "component.name" . }}
+        port:
+          number: 8080

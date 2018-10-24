@@ -33,7 +33,7 @@ func prepareTracing(addressjaeger string) {
 	}
 	exporter, err := jaeger.NewExporter(jaeger.Options{
 		Endpoint:    addressjaeger,
-		ServiceName: "demo"},
+		ServiceName: "demo-observability"},
 	)
 	if err != nil {
 		log.Fatal().Msg("can't create jaeger exporter")

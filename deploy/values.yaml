@@ -1,0 +1,5 @@
+global:
+  istio:
+    lts: false
+  kubernetes:
+    namespace: default

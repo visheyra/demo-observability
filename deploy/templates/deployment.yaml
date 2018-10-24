@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "component.name" . }}
+  namespace: {{ .Values.global.kubernetes.namespace }}
+  labels:
+    app: {{ template "component.name" . }}
+    name: {{ template "component.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ template "component.name" . }}
+        name: {{ template "component.name" . }}
+        chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+    spec:
+      containers:
+      - name: aws-metrics-exporter
+        image: visheyra/demo-observability:latest
+        args:
+        - start
+        - --jaegerurl
+        - http://monitoring-jaeger-collector.monitoring.svc.cluster.local:14268
+        ports:
+        - name: http
+          containerPort: 8080
