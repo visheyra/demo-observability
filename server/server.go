@@ -44,7 +44,6 @@ func prepareTracing(addressjaeger string) {
 
 func randomMessage(ctx context.Context) []byte {
 	_, span := trace.StartSpan(ctx, "demo.server.handler")
-	fmt.Println(ctx)
 	defer span.End()
 
 	log.Debug().Msg("Random Message Gen Reached")
