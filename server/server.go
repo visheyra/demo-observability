@@ -44,6 +44,7 @@ func prepareTracing(addressjaeger string) {
 
 func randomMessage(ctx context.Context) []byte {
 	_, span := trace.StartSpan(ctx, "demo.server.handler")
+	fmt.Println(ctx)
 	defer span.End()
 
 	log.Debug().Msg("Random Message Gen Reached")
@@ -114,7 +115,7 @@ func prepareTelemetry(pe *prometheus.Exporter) {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("Request handled")
-	ctx, span := trace.StartSpan(context.Background(), "demo.server.handler")
+	ctx, span := trace.StartSpan(r.Context(), "demo.server.handler")
 	defer span.End()
 
 	handled += 1

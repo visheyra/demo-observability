@@ -21,8 +21,9 @@ spec:
         heritage: {{ .Release.Service }}
     spec:
       containers:
-      - name: aws-metrics-exporter
+      - name: demo-observability
         image: visheyra/demo-observability:latest
+        imagePullPolicy: Always
         args:
         - start
         - --jaegerurl
