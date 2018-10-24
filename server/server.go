@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net/http"
-	"runtime"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -17,7 +17,11 @@ import (
 )
 
 var handled int64
+var yes int64
+var no int64
 var nbr = stats.Int64("http/requests", "requests count", "")
+var nbrYes = stats.Int64("demo_observability/yes", "yes count", "")
+var nbrNo = stats.Int64("demo_observability/no", "no count", "")
 
 //
 // Telemetry and tracing code
@@ -38,19 +42,69 @@ func prepareTracing(addressjaeger string) {
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 }
 
+func randomMessage(ctx context.Context) []byte {
+	_, span := trace.StartSpan(ctx, "demo.server.handler")
+	defer span.End()
+
+	log.Debug().Msg("Random Message Gen Reached")
+	x := rand.Int()
+
+	if x%2 == 0 {
+
+		span.Annotate(
+			[]trace.Attribute{
+				trace.Int64Attribute("value", int64(x)),
+				trace.StringAttribute("response", "no"),
+			},
+			"process no",
+		)
+
+		no += 1
+		stats.Record(ctx, nbrNo.M(no))
+		return []byte("no")
+	}
+	yes += 1
+	stats.Record(ctx, nbrYes.M(yes))
+
+	span.Annotate(
+		[]trace.Attribute{
+			trace.Int64Attribute("value", int64(x)),
+			trace.StringAttribute("response", "yes"),
+		},
+		"process yes",
+	)
+	return []byte("yes")
+}
+
 func prepareTelemetry(pe *prometheus.Exporter) {
 	handled = 0
 
 	viewCount := &view.View{
-		Name:        "http_count",
+		Name:        "demo_observ_http_count",
 		Description: "number of http requests made",
 		TagKeys:     nil,
 		Measure:     nbr,
 		Aggregation: view.LastValue(),
 	}
 
+	yesCount := &view.View{
+		Name:        "demo_observ_yes_count",
+		Description: "number of yes response made",
+		TagKeys:     nil,
+		Measure:     nbrYes,
+		Aggregation: view.LastValue(),
+	}
+
+	noCount := &view.View{
+		Name:        "demo_observ_no_count",
+		Description: "number of no response made",
+		TagKeys:     nil,
+		Measure:     nbrNo,
+		Aggregation: view.LastValue(),
+	}
+
 	view.RegisterExporter(pe)
-	view.Register(viewCount)
+	view.Register(viewCount, yesCount, noCount)
 	view.SetReportingPeriod(10 * time.Second)
 }
 
@@ -61,23 +115,27 @@ func prepareTelemetry(pe *prometheus.Exporter) {
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("Request handled")
 	ctx, span := trace.StartSpan(context.Background(), "demo.server.handler")
-	span.Annotate(nil, "user")
 	defer span.End()
 
 	handled += 1
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("I've been asked to serve SO MANY TIMES ... at least %d\n", int(handled))))
+	w.Write(randomMessage(ctx))
 
 	stats.Record(ctx, nbr.M(handled))
 }
 
 func Serve(port int, jaegerurl string) {
+	yes = 0
+	no = 0
 	handled = 0
+
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	pe, err := prometheus.NewExporter(prometheus.Options{
 		Namespace: "demo",
 	})
 	if err != nil {
-		log.Error().Msg("fail to create exporter")
+		log.Fatal().Msg("fail to create exporter")
 	}
 
 	prepareTracing(jaegerurl)
@@ -89,7 +147,6 @@ func Serve(port int, jaegerurl string) {
 	h := &ochttp.Handler{Handler: mux}
 	log.Info().Msg("starting http handler")
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), h); err != nil {
-		log.Error().Msg("fail to start http server")
-		runtime.Goexit()
+		log.Fatal().Msg("fail to start http server")
 	}
 }
