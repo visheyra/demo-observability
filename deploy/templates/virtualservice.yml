@@ -11,7 +11,7 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   gateways:
-  - eh-gateway
+  - {{ .Values.global.istio.gateway }}
   hosts:
   - '*'
   http:

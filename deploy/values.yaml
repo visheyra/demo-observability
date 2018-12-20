@@ -1,5 +1,6 @@
 global:
   istio:
+    gateway: eh-gateway``
     lts: false
   kubernetes:
     namespace: default
